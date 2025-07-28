@@ -72,5 +72,3 @@ This project is currently under active development. APIs may change as we contin
 ## Credits
 
 Built on top of the excellent [Mellium XMPP libraries](https://mellium.im/).
-
-
