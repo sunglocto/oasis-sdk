@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"strings"
 
 	"mellium.im/sasl"
 	"mellium.im/xmpp"
@@ -151,84 +150,6 @@ func (self *XmppClient) MarkAsRead(orignalMSG *XMPPChatMessage) error {
 	//if err != nil {
 	//	fmt.Println(err.Error())
 	//}
-}
-
-// SendText sends a plain message with `body` (type string) to `to` JID
-func (self *XmppClient) SendText(to jid.JID, body string) error {
-	msg := XMPPChatMessage{
-		Message: stanza.Message{
-			To:   to,
-			Type: stanza.ChatMessage,
-		},
-		ChatMessageBody: ChatMessageBody{
-			Body: &body,
-		},
-	}
-	err := self.Session.Encode(self.Ctx, msg)
-	return err
-}
-
-// ReplyToEvent replies to a message event with body as per https://xmpp.org/extensions/xep-0461.html
-func (self *XmppClient) ReplyToEvent(originalMsg *XMPPChatMessage, body string) error {
-	//pull out JIDs as per https://xmpp.org/extensions/xep-0461.html#usecases
-	replyTo := originalMsg.From
-	to := replyTo.Bare()
-
-	//name to include in fallback
-	var readableReplyTo string
-	if originalMsg.Type == stanza.ChatMessage {
-		readableReplyTo = to.String()
-	} else if originalMsg.Type == stanza.GroupChatMessage {
-		readableReplyTo = replyTo.Resourcepart()
-	}
-
-	timeAgo := "TODO ago"
-
-	originalBody := *originalMsg.CleanedBody
-	quoteOriginalBody := readableReplyTo + " | " + timeAgo + "\n> " + strings.ReplaceAll(originalBody, "\n", "\n> ") + "\n"
-
-	//ID to use in reply as per https://xmpp.org/extensions/xep-0461.html#business-id
-	var replyToID string
-	if originalMsg.Type == stanza.GroupChatMessage {
-		//TODO check if room advertizes unique ids, if not cannot reply in groupchat even if id is present
-		if originalMsg.StanzaID == nil || originalMsg.StanzaID.By.String() != to.String() {
-			return self.SendText(to, quoteOriginalBody+body)
-		}
-		replyToID = originalMsg.StanzaID.ID
-	} else if originalMsg.OriginID != nil {
-		replyToID = originalMsg.OriginID.ID
-	} else {
-		replyToID = originalMsg.ID
-	}
-
-	// <reply> as per https://xmpp.org/extensions/xep-0461.html#usecases
-	replyStanza := Reply{
-		To: replyTo.String(),
-		ID: replyToID,
-	}
-
-	// <fallback> as per https://xmpp.org/extensions/xep-0461.html#compat
-	replyFallback := Fallback{
-		For: "urn:xmpp:reply:0",
-		Body: FallbackBody{
-			Start: 0,
-			End:   len(quoteOriginalBody) - 1,
-		},
-	}
-
-	b := quoteOriginalBody + body
-	msg := XMPPChatMessage{
-		Message: stanza.Message{
-			To:   to,
-			Type: originalMsg.Type,
-		},
-		ChatMessageBody: ChatMessageBody{
-			Body:     &b,
-			Reply:    &replyStanza,
-			Fallback: []Fallback{replyFallback},
-		},
-	}
-	return self.Session.Encode(self.Ctx, msg)
 }
 
 // CreateClient creates the client object using the login info object and returns it
