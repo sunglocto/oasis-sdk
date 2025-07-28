@@ -10,7 +10,7 @@ import (
 )
 
 // SendText sends a plain message with `body` (type string) to `to` JID
-func (self *XmppClient) SendText(to jid.JID, body string) error {
+func (client *XmppClient) SendText(to jid.JID, body string) error {
 	msg := XMPPChatMessage{
 		Message: stanza.Message{
 			To:   to,
@@ -20,12 +20,12 @@ func (self *XmppClient) SendText(to jid.JID, body string) error {
 			Body: &body,
 		},
 	}
-	err := self.Session.Encode(self.Ctx, msg)
+	err := client.Session.Encode(client.Ctx, msg)
 	return err
 }
 
 // ReplyToEvent replies to a message event with body as per https://xmpp.org/extensions/xep-0461.html
-func (self *XmppClient) ReplyToEvent(originalMsg *XMPPChatMessage, body string) error {
+func (client *XmppClient) ReplyToEvent(originalMsg *XMPPChatMessage, body string) error {
 	//pull out JIDs as per https://xmpp.org/extensions/xep-0461.html#usecases
 	replyTo := originalMsg.From
 	to := replyTo.Bare()
@@ -48,7 +48,7 @@ func (self *XmppClient) ReplyToEvent(originalMsg *XMPPChatMessage, body string) 
 	if originalMsg.Type == stanza.GroupChatMessage {
 		//TODO check if room advertizes unique ids, if not cannot reply in groupchat even if id is present
 		if originalMsg.StanzaID == nil || originalMsg.StanzaID.By.String() != to.String() {
-			return self.SendText(to, quoteOriginalBody+body)
+			return client.SendText(to, quoteOriginalBody+body)
 		}
 		replyToID = originalMsg.StanzaID.ID
 	} else if originalMsg.OriginID != nil {
@@ -84,12 +84,12 @@ func (self *XmppClient) ReplyToEvent(originalMsg *XMPPChatMessage, body string) 
 			Fallback: []Fallback{replyFallback},
 		},
 	}
-	return self.Session.Encode(self.Ctx, msg)
+	return client.Session.Encode(client.Ctx, msg)
 }
 
-func (self *XmppClient) internalHandleDM(header stanza.Message, t xmlstream.TokenReadEncoder) error {
+func (client *XmppClient) internalHandleDM(header stanza.Message, t xmlstream.TokenReadEncoder) error {
 	//nothing to do if theres no handler
-	if self.dmHandler == nil {
+	if client.dmHandler == nil {
 		return nil
 	}
 
@@ -107,19 +107,19 @@ func (self *XmppClient) internalHandleDM(header stanza.Message, t xmlstream.Toke
 
 	//mark as received if requested, and not group chat as per https://xmpp.org/extensions/xep-0184.html#when-groupchat
 	if msg.RequestingDeliveryReceipt() {
-		go self.MarkAsDelivered(msg)
+		go client.MarkAsDelivered(msg)
 	}
 
 	msg.ParseReply()
 
 	//call handler and return to connection
-	self.dmHandler(self, msg)
+	client.dmHandler(client, msg)
 	return nil
 }
 
-func (self *XmppClient) internalHandleGroupMsg(header stanza.Message, t xmlstream.TokenReadEncoder) error {
+func (client *XmppClient) internalHandleGroupMsg(header stanza.Message, t xmlstream.TokenReadEncoder) error {
 	//nothing to do if theres no handler
-	if self.groupMessageHandler == nil {
+	if client.groupMessageHandler == nil {
 		return nil
 	}
 
@@ -135,7 +135,7 @@ func (self *XmppClient) internalHandleGroupMsg(header stanza.Message, t xmlstrea
 		ChatMessageBody: *body,
 	}
 
-	ch := self.mucChannels[msg.From.Bare().String()]
+	ch := client.mucChannels[msg.From.Bare().String()]
 
 	fmt.Printf("groupchat %s, found channel: %t\n", msg.From.String(), ch == nil)
 
@@ -144,6 +144,6 @@ func (self *XmppClient) internalHandleGroupMsg(header stanza.Message, t xmlstrea
 	msg.ParseReply()
 
 	//call handler and return to connection
-	self.groupMessageHandler(self, ch, msg)
+	client.groupMessageHandler(client, ch, msg)
 	return nil
 }

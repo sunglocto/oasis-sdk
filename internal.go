@@ -8,20 +8,20 @@ import (
 
 // startServing is an internal function to add an internal handler to the session.
 // Most of this is just obtuse things inherited from mellium
-func (self *XmppClient) startServing() error {
-	err := self.Session.Send(self.Ctx, stanza.Presence{Type: stanza.AvailablePresence}.Wrap(nil))
+func (client *XmppClient) startServing() error {
+	err := client.Session.Send(client.Ctx, stanza.Presence{Type: stanza.AvailablePresence}.Wrap(nil))
 	if err != nil {
 		return err
 	}
-	return self.Session.Serve(
-		self.Multiplexer,
+	return client.Session.Serve(
+		client.Multiplexer,
 	)
 }
 
-func (self *XmppClient) internalHandleDeliveryReceipt(header stanza.Message, t xmlstream.TokenReadEncoder) error {
+func (client *XmppClient) internalHandleDeliveryReceipt(header stanza.Message, t xmlstream.TokenReadEncoder) error {
 
 	//only decode if there is a handler
-	if self.deliveryReceiptHandler == nil {
+	if client.deliveryReceiptHandler == nil {
 		return nil
 	}
 
@@ -36,14 +36,14 @@ func (self *XmppClient) internalHandleDeliveryReceipt(header stanza.Message, t x
 	//only one possible field
 	id := receipt.Received.ID
 
-	self.deliveryReceiptHandler(self, header.From, id)
+	client.deliveryReceiptHandler(client, header.From, id)
 	return nil
 }
 
-func (self *XmppClient) internalHandleReadReceipt(header stanza.Message, t xmlstream.TokenReadEncoder) error {
+func (client *XmppClient) internalHandleReadReceipt(header stanza.Message, t xmlstream.TokenReadEncoder) error {
 
 	//only decode if there is a handler
-	if self.readReceiptHandler == nil {
+	if client.readReceiptHandler == nil {
 		return nil
 	}
 
@@ -58,6 +58,6 @@ func (self *XmppClient) internalHandleReadReceipt(header stanza.Message, t xmlst
 	//only one possible field
 	id := receipt.Displayed.ID
 
-	self.readReceiptHandler(self, header.From, id)
+	client.readReceiptHandler(client, header.From, id)
 	return nil
 }

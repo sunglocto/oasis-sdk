@@ -32,37 +32,37 @@ type PausedChatstate struct {
 	XMLName xml.Name `xml:"http://jabber.org/protocol/chatstates paused"`
 }
 
-func (self *XmppClient) internalComposingChatstateReciever(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
-	if self.chatstateHandler != nil {
-		self.chatstateHandler(self, header.From, ChatStateComposing)
+func (client *XmppClient) internalComposingChatstateReciever(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
+	if client.chatstateHandler != nil {
+		client.chatstateHandler(client, header.From, ChatStateComposing)
 	}
 	return nil
 }
 
-func (self *XmppClient) internalActiveChatstateReceiver(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
-	if self.chatstateHandler != nil {
-		self.chatstateHandler(self, header.From, ChatStateActive)
+func (client *XmppClient) internalActiveChatstateReceiver(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
+	if client.chatstateHandler != nil {
+		client.chatstateHandler(client, header.From, ChatStateActive)
 	}
 	return nil
 }
 
-func (self *XmppClient) internalPausedChatstateReceiver(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
-	if self.chatstateHandler != nil {
-		self.chatstateHandler(self, header.From, ChatStatePaused)
+func (client *XmppClient) internalPausedChatstateReceiver(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
+	if client.chatstateHandler != nil {
+		client.chatstateHandler(client, header.From, ChatStatePaused)
 	}
 	return nil
 }
 
-func (self *XmppClient) internalInactiveChatstateReceiver(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
-	if self.chatstateHandler != nil {
-		self.chatstateHandler(self, header.From, ChatStateInactive)
+func (client *XmppClient) internalInactiveChatstateReceiver(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
+	if client.chatstateHandler != nil {
+		client.chatstateHandler(client, header.From, ChatStateInactive)
 	}
 	return nil
 }
 
-func (self *XmppClient) internalGoneChatstateReceiver(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
-	if self.chatstateHandler != nil {
-		self.chatstateHandler(self, header.From, ChatStateGone)
+func (client *XmppClient) internalGoneChatstateReceiver(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
+	if client.chatstateHandler != nil {
+		client.chatstateHandler(client, header.From, ChatStateGone)
 	}
 	return nil
 }

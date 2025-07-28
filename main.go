@@ -24,18 +24,18 @@ If blocking is true, this method will not exit until the xmpp connection is no l
 If blocking is false, this method will exit as soon as a connection is created, and errors will be emitted
 through the callback onErr
 */
-func (self *XmppClient) Connect(blocking bool, onErr connectionErrHandler) error {
+func (client *XmppClient) Connect(blocking bool, onErr connectionErrHandler) error {
 	d := dial.Dialer{}
 
-	conn, err := d.DialServer(self.Ctx, "tcp", *self.JID, *self.Server)
+	conn, err := d.DialServer(client.Ctx, "tcp", *client.JID, *client.Server)
 	if err != nil {
 		return errors.New("Could not connect stage 1 - " + err.Error())
 	}
 
-	self.Session, err = xmpp.NewSession(
-		self.Ctx,
-		self.JID.Domain(),
-		*self.JID,
+	client.Session, err = xmpp.NewSession(
+		client.Ctx,
+		client.JID.Domain(),
+		*client.JID,
 		conn,
 		0,
 		xmpp.NewNegotiator(func(*xmpp.Session, *xmpp.StreamConfig) xmpp.StreamConfig {
@@ -44,10 +44,10 @@ func (self *XmppClient) Connect(blocking bool, onErr connectionErrHandler) error
 				Features: []xmpp.StreamFeature{
 					xmpp.BindResource(),
 					xmpp.StartTLS(&tls.Config{
-						ServerName: *self.Server,
+						ServerName: *client.Server,
 						MinVersion: tls.VersionTLS12,
 					}),
-					xmpp.SASL("", self.Login.Password, sasl.ScramSha1Plus, sasl.ScramSha1, sasl.Plain),
+					xmpp.SASL("", client.Login.Password, sasl.ScramSha1Plus, sasl.ScramSha1, sasl.Plain),
 				},
 				TeeIn:  nil,
 				TeeOut: nil,
@@ -58,30 +58,30 @@ func (self *XmppClient) Connect(blocking bool, onErr connectionErrHandler) error
 		return errors.New("Could not connect stage 2 - " + err.Error())
 	}
 
-	if self.Session == nil {
+	if client.Session == nil {
 		panic("session never got set")
 	}
 
 	go func() {
-		n := len(self.mucsToJoin)
-		for i, mucJID := range self.mucsToJoin {
+		n := len(client.mucsToJoin)
+		for i, mucJID := range client.mucsToJoin {
 			fmt.Printf("Joining muc %d/%d \"%s\" with nickname \"%s\"\n", i+1, n, mucJID.Bare().String(), mucJID.Resourcepart())
-			ch, err := self.MucClient.Join(self.Ctx, mucJID, self.Session)
+			ch, err := client.MucClient.Join(client.Ctx, mucJID, client.Session)
 			if err != nil {
 				println(err.Error())
 				continue
 			}
-			self.mucChannels[mucJID.String()] = ch
+			client.mucChannels[mucJID.String()] = ch
 			fmt.Printf("joined muc %d/%d\n", i+1, n)
 		}
 	}()
 
 	if blocking {
-		return self.startServing()
+		return client.startServing()
 	} else {
 		//serve in a thread
 		go func() {
-			err := self.startServing()
+			err := client.startServing()
 
 			//if error, try callback error handler, otherwise panic
 			if err != nil {
@@ -98,7 +98,7 @@ func (self *XmppClient) Connect(blocking bool, onErr connectionErrHandler) error
 }
 
 // MarkAsDelivered sends delivery receipt as per https://xmpp.org/extensions/xep-0184.html
-func (self *XmppClient) MarkAsDelivered(orignalMSG *XMPPChatMessage) {
+func (client *XmppClient) MarkAsDelivered(orignalMSG *XMPPChatMessage) {
 	msg := DeliveryReceiptResponse{
 		Message: stanza.Message{
 			To:   orignalMSG.From.Bare(),
@@ -108,14 +108,14 @@ func (self *XmppClient) MarkAsDelivered(orignalMSG *XMPPChatMessage) {
 			ID: orignalMSG.ID, // dont send in groupchats, no need to handle
 		},
 	}
-	err := self.Session.Encode(self.Ctx, msg)
+	err := client.Session.Encode(client.Ctx, msg)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 }
 
 // MarkAsRead sends Read receipt as per https://xmpp.org/extensions/xep-0333.html
-func (self *XmppClient) MarkAsRead(orignalMSG *XMPPChatMessage) error {
+func (client *XmppClient) MarkAsRead(orignalMSG *XMPPChatMessage) error {
 
 	//pull relevant id for type of message
 	var id string
@@ -145,7 +145,7 @@ func (self *XmppClient) MarkAsRead(orignalMSG *XMPPChatMessage) error {
 	}
 
 	//send
-	return self.Session.Encode(self.Ctx, msg)
+	return client.Session.Encode(client.Ctx, msg)
 	//err := self.Session.Encode(self.Ctx, msg)
 	//if err != nil {
 	//	fmt.Println(err.Error())
