@@ -1,4 +1,4 @@
-# XMPP Helper Library
+# Oasis SDK for XMPP
 
 > ⚠️ **WARNING**: This project is in early development and APIs are subject
 > to change without notice. Use in production at your own peril.
@@ -38,7 +38,7 @@ A Go-based project developed with Go 1.24.5.
 ## Requirements
 
 - Go 1.24.5 or later
-- 
+
 ## Usage Example
 
 (Coming soon - The project is in early stage development)
