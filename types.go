@@ -3,6 +3,7 @@ package oasis_sdk
 import (
 	"context"
 	"encoding/xml"
+	"mellium.im/xmlstream"
 	"mellium.im/xmpp"
 	"mellium.im/xmpp/jid"
 	"mellium.im/xmpp/muc"
@@ -123,6 +124,16 @@ type XMPPChatMessage struct {
 	stanza.Message
 	ChatMessageBody
 }
+
+// IQTuple holds the "function parameters" to be passed as the result of an iq.
+type IQTuple struct {
+	header stanza.Message
+	t      xmlstream.TokenReadEncoder
+}
+
+// IQMap maps pending IQs to the channel awaiting their result. This way you can send
+// off an IQ, then await the channel to send back the result
+type IQMap map[string]chan IQTuple
 
 type ChatMessageHandler func(client *XmppClient, message *XMPPChatMessage)
 type GroupChatMessageHandler func(client *XmppClient, channel *muc.Channel, message *XMPPChatMessage)
