@@ -107,12 +107,12 @@ type ChatMessageBody struct {
 	ReplyFallbackText  *string                 `xml:"-"`
 }
 
-func (self *ChatMessageBody) RequestingDeliveryReceipt() bool {
-	return self.Request != nil
+func (chatMsg *ChatMessageBody) RequestingDeliveryReceipt() bool {
+	return chatMsg.Request != nil
 }
 
-func (self *ChatMessageBody) RequestingReadReceipt() bool {
-	return self.Markable != nil
+func (chatMsg *ChatMessageBody) RequestingReadReceipt() bool {
+	return chatMsg.Markable != nil
 }
 
 /*
