@@ -82,6 +82,8 @@ func (client *XmppClient) Connect() error {
 		}
 	}()
 
+	go client.DiscoServicesOnServer()
+
 	return client.startServing()
 }
 

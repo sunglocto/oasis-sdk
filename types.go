@@ -142,7 +142,6 @@ type XmppClient struct {
 	MucClient              *muc.Client
 	mucsToJoin             []jid.JID
 	mucChannels            map[string]*muc.Channel
-	IQMap                  IQMap
 	dmHandler              ChatMessageHandler
 	groupMessageHandler    GroupChatMessageHandler
 	chatstateHandler       ChatstateHandler
