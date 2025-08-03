@@ -15,11 +15,11 @@ type IQMap map[string]chan xmlstream.TokenReadEncoder
 
 type preparedIQ struct {
 	stanza.IQ
-	Payload interface{}
+	Payload any
 }
 
 // TODO: test
-func (client *XmppClient) SendQuery(to jid.JID, iq interface{}, resultObj *interface{}) error {
+func (client *XmppClient) SendQuery(to jid.JID, iq any, resultObj *any) error {
 	id := uuid.New().String()
 
 	// Create and send the IQ stanza
@@ -46,13 +46,16 @@ func (client *XmppClient) SendQuery(to jid.JID, iq interface{}, resultObj *inter
 		return fmt.Errorf("oasis_sdk: failed to encode IQ after appending header: %w", err)
 	}
 
+	//await result stanza
 	t := <-resultChan
 
+	// decode result stanza to result object
 	d := xml.NewTokenDecoder(t)
 	err = d.Decode(resultObj)
 	if err != nil {
 		return err
 	}
 
+	//no error if successful
 	return nil
 }

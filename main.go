@@ -16,15 +16,20 @@ import (
 	"mellium.im/xmpp/stanza"
 )
 
-type connectionErrHandler func(err error)
+// startServing is an internal function to add an internal handler to the session.
+// Most of this is just obtuse things inherited from mellium
+func (client *XmppClient) startServing() error {
+	err := client.Session.Send(client.Ctx, stanza.Presence{Type: stanza.AvailablePresence}.Wrap(nil))
+	if err != nil {
+		return err
+	}
+	return client.Session.Serve(
+		client.Multiplexer,
+	)
+}
 
-/*
-Connect dials the server and starts receiving the events.
-If blocking is true, this method will not exit until the xmpp connection is no longer being maintained.
-If blocking is false, this method will exit as soon as a connection is created, and errors will be emitted
-through the callback onErr
-*/
-func (client *XmppClient) Connect(blocking bool, onErr connectionErrHandler) error {
+// Connect dials the server and starts receiving the events.
+func (client *XmppClient) Connect() error {
 	d := dial.Dialer{}
 
 	conn, err := d.DialServer(client.Ctx, "tcp", *client.JID, *client.Server)
@@ -62,6 +67,7 @@ func (client *XmppClient) Connect(blocking bool, onErr connectionErrHandler) err
 		panic("session never got set")
 	}
 
+	//TODO: move joins elsewhere
 	go func() {
 		n := len(client.mucsToJoin)
 		for i, mucJID := range client.mucsToJoin {
@@ -76,80 +82,7 @@ func (client *XmppClient) Connect(blocking bool, onErr connectionErrHandler) err
 		}
 	}()
 
-	if blocking {
-		return client.startServing()
-	} else {
-		//serve in a thread
-		go func() {
-			err := client.startServing()
-
-			//if error, try callback error handler, otherwise panic
-			if err != nil {
-				if onErr == nil {
-					panic(err)
-				} else {
-					onErr(err)
-				}
-			}
-		}()
-	}
-
-	return nil
-}
-
-// MarkAsDelivered sends delivery receipt as per https://xmpp.org/extensions/xep-0184.html
-func (client *XmppClient) MarkAsDelivered(orignalMSG *XMPPChatMessage) {
-	msg := DeliveryReceiptResponse{
-		Message: stanza.Message{
-			To:   orignalMSG.From.Bare(),
-			Type: orignalMSG.Type,
-		},
-		Received: DeliveryReceipt{
-			ID: orignalMSG.ID, // dont send in groupchats, no need to handle
-		},
-	}
-	err := client.Session.Encode(client.Ctx, msg)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-}
-
-// MarkAsRead sends Read receipt as per https://xmpp.org/extensions/xep-0333.html
-func (client *XmppClient) MarkAsRead(orignalMSG *XMPPChatMessage) error {
-
-	//pull relevant id for type of message
-	var id string
-	if orignalMSG.Type == stanza.GroupChatMessage {
-		stanzaID := orignalMSG.StanzaID
-		if stanzaID == nil {
-			return errors.New("stanza id is nil")
-		}
-		if stanzaID.By.String() != orignalMSG.From.Bare().String() {
-			return errors.New("stanza id is not set by group host")
-		}
-		//TODO check if muc advertises stable IDs
-		id = stanzaID.ID
-	} else {
-		id = orignalMSG.ID
-	}
-
-	//craft event
-	msg := ReadReceiptResponse{
-		Message: stanza.Message{
-			To:   orignalMSG.From.Bare(),
-			Type: orignalMSG.Type,
-		},
-		Displayed: ReadReceipt{
-			ID: id,
-		},
-	}
-
-	//send
-	return client.Session.Encode(client.Ctx, msg)
-	//err := self.Session.Encode(self.Ctx, msg)
-	//if err != nil {
-	//	fmt.Println(err.Error())
-	//}
+	return client.startServing()
 }
 
 // CreateClient creates the client object using the login info object and returns it
