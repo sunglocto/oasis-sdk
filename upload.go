@@ -114,6 +114,11 @@ func (client *XmppClient) UploadFileFromBytes(filename string, content []byte) (
 		return "", fmt.Errorf("failed to get upload slot: %w", err)
 	}
 
+	//sanity check
+	if putData == nil || getURL == "" {
+		return "", errors.New("upload slot is malformed")
+	}
+
 	//create new request object
 	req, err := http.NewRequest(http.MethodPut, putData.URL, bytes.NewReader(content))
 	if err != nil {
@@ -171,6 +176,11 @@ func (client *XmppClient) UploadFile(path string) (string, error) {
 	putData, getURL, err := client.getUploadSlot(request)
 	if err != nil {
 		return "", fmt.Errorf("failed to get upload slot: %w", err)
+	}
+
+	//sanity check
+	if putData == nil || getURL == "" {
+		return "", errors.New("upload slot is malformed")
 	}
 
 	//create new request object
