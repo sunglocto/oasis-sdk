@@ -7,6 +7,7 @@ import (
 	"mellium.im/xmpp/disco"
 	"mellium.im/xmpp/disco/items"
 	jid2 "mellium.im/xmpp/jid"
+	"strconv"
 )
 
 /*
@@ -17,14 +18,43 @@ Otherwise, if the function returns a non-nil error, WalkItem stops entirely and 
 
 // DiscoServerItem handles a server item being discovered. Implements WalkItemFunc
 func (client *XmppClient) DiscoServerItem(level int, item items.Item, err error) error {
-	fmt.Printf(
-		"discovered server item at level %d, name: %s, jid %s, node %v, err %v\n",
-		level, item.Name, item.JID.String(), item.Node, err,
-	)
+	//fmt.Printf(
+	//	"discovered server item at level %d, name: %s, jid %s, node %v, err %v\n",
+	//	level, item.Name, item.JID.String(), item.Node, err,
+	//)
 
 	info, err := disco.GetInfo(context.Background(), "", item.JID, client.Session)
 
-	fmt.Printf("%s: %v", item.JID.String(), info)
+	identity := info.Identity[0]
+	//fmt.Printf("%s: Type %s, Category %s\n", item.JID.String(), identity.Type, identity.Category)
+
+	if identity.Type == "text" && identity.Category == "conference" {
+		return disco.ErrSkipItem
+	}
+
+	if identity.Type == "file" && identity.Category == "store" {
+		httpUploadComponent := HttpUploadComponent{
+			Jid: item.JID,
+		}
+
+		for _, x := range info.Form {
+			v, ok := x.GetString("max-file-size")
+			if ok {
+				//fmt.Printf("max-file-size: %s\n", v)
+				maxFileSize, err := strconv.ParseInt(v, 10, 64)
+				if err != nil {
+					fmt.Printf("Could not parse max-file-size: %v\n", err)
+					maxFileSize = 0
+				}
+				httpUploadComponent.MaxFileSize = maxFileSize
+				break
+				//httpUploadComponent.MaxFileSize
+			}
+		}
+
+		client.HttpUploadComponent = httpUploadComponent
+		fmt.Println(client.HttpUploadComponent)
+	}
 
 	return nil
 }
