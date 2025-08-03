@@ -144,6 +144,7 @@ type XmppClient struct {
 	Server                 *string
 	Session                *xmpp.Session
 	Multiplexer            *mux.ServeMux
+	HttpUploadComponent    *HttpUploadComponent
 	MucClient              *muc.Client
 	mucsToJoin             []jid.JID
 	mucChannels            map[string]*muc.Channel
@@ -152,5 +153,4 @@ type XmppClient struct {
 	chatstateHandler       ChatstateHandler
 	deliveryReceiptHandler DeliveryReceiptHandler
 	readReceiptHandler     ReadReceiptHandler
-	HttpUploadComponent    HttpUploadComponent
 }

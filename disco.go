@@ -55,7 +55,7 @@ func (client *XmppClient) DiscoServerItem(level int, item items.Item, err error)
 			}
 		}
 
-		client.HttpUploadComponent = httpUploadComponent
+		client.HttpUploadComponent = &httpUploadComponent
 		fmt.Println(client.HttpUploadComponent)
 	}
 
