@@ -1,6 +1,7 @@
-// Package oasis_sdk implements XMPP file upload functionality according to XEP-0363 HTTP File Upload
-// specification. It provides methods for requesting upload slots and performing file uploads.
 package oasis_sdk
+
+// upload.go implements XMPP file upload functionality according to XEP-0363 HTTP File Upload
+// specification. It provides methods for requesting upload slots and performing file uploads.
 
 import (
 	"bytes"
