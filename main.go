@@ -71,13 +71,14 @@ func (client *XmppClient) Connect() error {
 	go func() {
 		n := len(client.mucsToJoin)
 		for i, mucJID := range client.mucsToJoin {
-			fmt.Printf("Joining muc %d/%d \"%s\" with nickname \"%s\"\n", i+1, n, mucJID.Bare().String(), mucJID.Resourcepart())
+			mucStr := mucJID.Bare().String()
+			fmt.Printf("Joining muc %d/%d \"%s\" with nickname \"%s\"\n", i+1, n, mucStr, mucJID.Resourcepart())
 			ch, err := client.MucClient.Join(client.Ctx, mucJID, client.Session)
 			if err != nil {
 				println(err.Error())
 				continue
 			}
-			client.mucChannels[mucJID.String()] = ch
+			client.mucChannels[mucStr] = ch
 			fmt.Printf("joined muc %d/%d\n", i+1, n)
 		}
 	}()

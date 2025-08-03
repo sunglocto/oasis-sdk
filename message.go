@@ -9,12 +9,22 @@ import (
 	"strings"
 )
 
-// SendText sends a plain message with `body` (type string) to `to` JID
+// SendText sends a plain message with `body` (type string) to `to` JID.
+// automatically determines whether to send a groupchatmessage or chatmessage.
 func (client *XmppClient) SendText(to jid.JID, body string) error {
+
+	//determine if we're sending to a group chat
+	var msgType stanza.MessageType
+	if client.mucChannels[to.String()] == nil {
+		msgType = stanza.ChatMessage
+	} else {
+		msgType = stanza.GroupChatMessage
+	}
+
 	msg := XMPPChatMessage{
 		Message: stanza.Message{
 			To:   to,
-			Type: stanza.ChatMessage,
+			Type: msgType,
 		},
 		ChatMessageBody: ChatMessageBody{
 			Body: &body,
@@ -25,6 +35,7 @@ func (client *XmppClient) SendText(to jid.JID, body string) error {
 }
 
 // ReplyToEvent replies to a message event with body as per https://xmpp.org/extensions/xep-0461.html
+// automatically determines whether to send a groupchatmessage or chatmessage.
 func (client *XmppClient) ReplyToEvent(originalMsg *XMPPChatMessage, body string) error {
 	//pull out JIDs as per https://xmpp.org/extensions/xep-0461.html#usecases
 	replyTo := originalMsg.From
