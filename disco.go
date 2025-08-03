@@ -24,6 +24,9 @@ func (client *XmppClient) DiscoServerItem(level int, item items.Item, err error)
 	//)
 
 	info, err := disco.GetInfo(context.Background(), "", item.JID, client.Session)
+	if err != nil {
+		fmt.Printf("Error while getting info about %s, %v\n", item.JID.String(), err)
+	}
 
 	identity := info.Identity[0]
 	//fmt.Printf("%s: Type %s, Category %s\n", item.JID.String(), identity.Type, identity.Category)
@@ -65,7 +68,10 @@ func (client *XmppClient) DiscoServicesOnSelf() {
 		Name: "self",
 	}
 
-	disco.WalkItem(context.Background(), item, client.Session, client.DiscoServerItem)
+	err := disco.WalkItem(context.Background(), item, client.Session, client.DiscoServerItem)
+	if err != nil {
+		fmt.Printf("Error while walking self items: %v\n", err)
+	}
 }
 
 func (client *XmppClient) DiscoServicesOnServer() {
@@ -79,6 +85,9 @@ func (client *XmppClient) DiscoServicesOnServer() {
 		Name: *client.Server,
 	}
 
-	disco.WalkItem(context.Background(), item, client.Session, client.DiscoServerItem)
+	err = disco.WalkItem(context.Background(), item, client.Session, client.DiscoServerItem)
+	if err != nil {
+		fmt.Printf("Error while walking server items: %v\n", err)
+	}
 
 }
