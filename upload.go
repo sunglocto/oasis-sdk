@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"io"
 	"mellium.im/xmpp/stanza"
 	"net/http"
 	"os"
@@ -94,12 +95,73 @@ func (client *XmppClient) getUploadSlot(request UploadRequestDetails) (*PutURL, 
 	return &response.Slot.Put, response.Slot.Get.URL, nil
 }
 
+// UploadProgress represents the current status of an upload operation
+type UploadProgress struct {
+	BytesSent  int64
+	TotalBytes int64
+	Percentage float64
+	GetURL     string // Only set when upload is complete
+	Error      error  // Set if an error occurs
+}
+
+// progressReader wraps an io.Reader to track upload progress
+type progressReader struct {
+	reader       io.Reader
+	bytesRead    int64
+	totalSize    int64
+	progressFunc func(int64)
+}
+
+// Read reads data into the provided byte slice and updates the progress tracking information.
+func (pr *progressReader) Read(p []byte) (int, error) {
+	n, err := pr.reader.Read(p)
+	pr.bytesRead += int64(n)
+	if pr.progressFunc != nil {
+		pr.progressFunc(pr.bytesRead)
+	}
+	return n, err
+}
+
+// sendProgress sends the current upload progress, including bytes sent, total bytes, percentage, any error, and getURL.
+// It writes the update to progressChan without blocking if the channel is not ready.
+// Parameters: bytesSent is the number of bytes uploaded, totalBytes is the total size of the upload, err is any error
+// encountered, getURL is the download URL if upload completes successfully, and progressChan is the channel for progress.
+func sendProgress(bytesSent int64, totalBytes int64, err error, getURL string, progressChan chan<- UploadProgress) {
+	if progressChan == nil {
+		return
+	}
+	progress := UploadProgress{
+		BytesSent:  bytesSent,
+		TotalBytes: totalBytes,
+		Percentage: float64(bytesSent) / float64(totalBytes) * 100,
+		Error:      err,
+		GetURL:     getURL,
+	}
+	select {
+	case progressChan <- progress:
+	default:
+		// Don't block if receiver is not ready
+	}
+}
+
 // UploadFileFromBytes handles the complete process of uploading a file to the XMPP server.
 // It first requests an upload slot, then performs the HTTP PUT request to upload the file.
+// This method should be executed in a goroutine. Upload progress and status updates are sent through
+// the progressChan channel, which will be closed when the upload completes or fails.
 // Returns the GET URL where the file can be downloaded from, or an error if the upload fails.
-func (client *XmppClient) UploadFileFromBytes(filename string, content []byte) (string, error) {
+func (client *XmppClient) UploadFileFromBytes(
+	ctx context.Context,
+	filename string,
+	content []byte,
+	progressChan chan<- UploadProgress,
+) {
+	if progressChan != nil {
+		defer close(progressChan)
+	}
+
 	if filename == "" || len(content) == 0 {
-		return "", errors.New("filename and content cannot be empty")
+		sendProgress(0, 0, errors.New("filename and content cannot be empty"), "", progressChan)
+		return
 	}
 
 	// put together data
@@ -111,18 +173,28 @@ func (client *XmppClient) UploadFileFromBytes(filename string, content []byte) (
 	// request upload slot
 	putData, getURL, err := client.getUploadSlot(request)
 	if err != nil {
-		return "", fmt.Errorf("failed to get upload slot: %w", err)
+		sendProgress(0, request.Size, fmt.Errorf("failed to get upload slot: %w", err), "", progressChan)
+		return
 	}
 
 	//sanity check
 	if putData == nil || getURL == "" {
-		return "", errors.New("upload slot is malformed")
+		sendProgress(0, request.Size, errors.New("upload slot is malformed"), "", progressChan)
+		return
+	}
+
+	// Create a custom reader that reports progress
+	reader := &progressReader{
+		reader:       bytes.NewReader(content),
+		totalSize:    request.Size,
+		progressFunc: func(n int64) { sendProgress(n, request.Size, nil, "", progressChan) },
 	}
 
 	//create new request object
-	req, err := http.NewRequest(http.MethodPut, putData.URL, bytes.NewReader(content))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, putData.URL, reader)
 	if err != nil {
-		return "", fmt.Errorf("failed to create upload request: %w", err)
+		sendProgress(0, request.Size, fmt.Errorf("failed to create upload request: %w", err), "", progressChan)
+		return
 	}
 
 	//add auth headers
@@ -133,37 +205,54 @@ func (client *XmppClient) UploadFileFromBytes(filename string, content []byte) (
 	//make request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to upload file: %w", err)
+		sendProgress(reader.bytesRead, request.Size, fmt.Errorf("failed to upload file: %w", err), "", progressChan)
+		return
 	}
 	defer resp.Body.Close()
 
 	//check if request succeeded
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return "", fmt.Errorf("upload failed with status code: %d", resp.StatusCode)
+		sendProgress(reader.bytesRead, request.Size,
+			fmt.Errorf("upload failed with status code: %d", resp.StatusCode), "", progressChan)
+		return
 	}
 
-	return getURL, nil
+	// Send final progress with GetURL
+	sendProgress(request.Size, request.Size, nil, getURL, progressChan)
 }
 
 // UploadFile handles the complete process of uploading a file to the XMPP server.
 // It first requests an upload slot, then performs the HTTP PUT request to upload the file.
+// This method should be executed in a goroutine. Upload progress and status updates are sent through
+// the progressChan channel, which will be closed when the upload completes or fails.
 // Returns the GET URL where the file can be downloaded from, or an error if the upload fails.
-func (client *XmppClient) UploadFile(path string) (string, error) {
+func (client *XmppClient) UploadFile(
+	ctx context.Context,
+	path string,
+	progressChan chan<- UploadProgress,
+) {
+	if progressChan != nil {
+		defer close(progressChan)
+	}
+
 	if path == "" {
-		return "", errors.New("path cannot be empty")
+		sendProgress(0, 0, errors.New("path cannot be empty"), "", progressChan)
+		return
 	}
 
 	//open file
 	file, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to open file: %w", err)
+		sendProgress(0, 0, fmt.Errorf("failed to open file: %w", err), "", progressChan)
+		return
 	}
 	defer file.Close()
 
 	//get metadata
 	fileInfo, err := file.Stat()
 	if err != nil {
-		return "", fmt.Errorf("failed to get file info: %w", err)
+		sendProgress(0, 0, fmt.Errorf("failed to get file info: %w", err), "", progressChan)
+		return
 	}
 
 	// put together data
@@ -175,18 +264,28 @@ func (client *XmppClient) UploadFile(path string) (string, error) {
 	// request upload slot
 	putData, getURL, err := client.getUploadSlot(request)
 	if err != nil {
-		return "", fmt.Errorf("failed to get upload slot: %w", err)
+		sendProgress(0, request.Size, fmt.Errorf("failed to get upload slot: %w", err), "", progressChan)
+		return
 	}
 
 	//sanity check
 	if putData == nil || getURL == "" {
-		return "", errors.New("upload slot is malformed")
+		sendProgress(0, request.Size, errors.New("upload slot is malformed"), "", progressChan)
+		return
 	}
 
-	//create new request object
-	req, err := http.NewRequest(http.MethodPut, putData.URL, file)
+	// Create a progress tracking reader
+	reader := &progressReader{
+		reader:       file,
+		totalSize:    fileInfo.Size(),
+		progressFunc: func(n int64) { sendProgress(n, fileInfo.Size(), nil, "", progressChan) },
+	}
+
+	//create new request object with context for cancellation
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, putData.URL, reader)
 	if err != nil {
-		return "", fmt.Errorf("failed to create upload request: %w", err)
+		sendProgress(0, request.Size, fmt.Errorf("failed to create upload request: %w", err), "", progressChan)
+		return
 	}
 
 	// explicitly set the Content-Length header
@@ -200,14 +299,18 @@ func (client *XmppClient) UploadFile(path string) (string, error) {
 	//make request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to upload file: %w", err)
+		sendProgress(reader.bytesRead, request.Size, fmt.Errorf("failed to upload file: %w", err), "", progressChan)
+		return
 	}
 	defer resp.Body.Close()
 
 	//check if request succeeded
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return "", fmt.Errorf("upload failed with status code: %d", resp.StatusCode)
+		sendProgress(reader.bytesRead, request.Size,
+			fmt.Errorf("upload failed with status code: %d", resp.StatusCode), "", progressChan)
+		return
 	}
 
-	return getURL, nil
+	// Send final progress with GetURL
+	sendProgress(request.Size, request.Size, nil, getURL, progressChan)
 }
