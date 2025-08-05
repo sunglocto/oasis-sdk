@@ -34,9 +34,42 @@ func (client *XmppClient) SendText(to jid.JID, body string) error {
 	return err
 }
 
-//func (client *XmppClient) SendImage(to jid.JID, body string, url string, description string) error {
-//
-//}
+func (client *XmppClient) SendImage(to jid.JID, body string, url string, description *string) error {
+
+	//determine if we're sending to a group chat
+	var msgType stanza.MessageType
+	if client.mucChannels[to.String()] == nil {
+		msgType = stanza.ChatMessage
+	} else {
+		msgType = stanza.GroupChatMessage
+	}
+
+	bodyWithUrl := fmt.Sprintf("%s\n%s", body, url)
+
+	oob := OutOfBandMedia{
+		URL:         url,
+		Description: description,
+	}
+
+	msg := XMPPChatMessage{
+		Message: stanza.Message{
+			To:   to,
+			Type: msgType,
+		},
+		ChatMessageBody: ChatMessageBody{
+			Body:           &bodyWithUrl,
+			OutOfBandMedia: &oob,
+		},
+	}
+
+	fmt.Println(msg)
+
+	err := client.Session.Encode(client.Ctx, msg)
+
+	fmt.Println("sent image")
+	return err
+
+}
 
 // ReplyToEvent replies to a message event with body as per https://xmpp.org/extensions/xep-0461.html
 // automatically determines whether to send a groupchatmessage or chatmessage.

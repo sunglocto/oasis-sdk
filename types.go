@@ -82,6 +82,13 @@ type ReadReceiptResponse struct {
 	Displayed ReadReceipt `xml:"displayed"`
 }
 
+// OutOfBandMedia implements https://xmpp.org/extensions/xep-0066.html#x-oob
+type OutOfBandMedia struct {
+	XMLName     xml.Name `xml:"jabber:x:oob x"`
+	URL         string   `xml:"url"`
+	Description *string  `xml:"desc"` //optional
+}
+
 type UnknownElement struct {
 	XMLName xml.Name
 	Content string     `xml:",innerxml"`
@@ -101,6 +108,7 @@ type ChatMessageBody struct {
 	InactiveChatState  *InactiveChatstate      `xml:"inactive"`
 	ComposingChatState *ComposingChatstate     `xml:"composing"`
 	PausedChatState    *PausedChatstate        `xml:"paused"`
+	OutOfBandMedia     *OutOfBandMedia         `xml:"jabber:x:oob x"`
 	Unknown            []UnknownElement        `xml:",any"`
 	FallbacksParsed    bool                    `xml:"-"`
 	CleanedBody        *string                 `xml:"-"`
