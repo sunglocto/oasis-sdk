@@ -9,9 +9,9 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"io"
 	"mellium.im/xmpp/stanza"
+	"mellium.im/xmpp/upload"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -55,51 +55,38 @@ type UploadSlotResponse struct {
 // getUploadSlot requests an upload slot from the XMPP server's HTTP upload component.
 // It returns the PUT URL with headers for uploading and the GET URL for retrieving the file.
 // Returns an error if the upload component isn't available or if the file size exceeds limits.
-func (client *XmppClient) getUploadSlot(request UploadRequestDetails) (*PutURL, string, error) {
+// Times out after 30 seconds if a slot is not acquired.
+func (client *XmppClient) getUploadSlot(parentCtx context.Context, request upload.File) (*upload.Slot, error) {
 	if client.HttpUploadComponent == nil || client.HttpUploadComponent.Jid.String() == "" {
-		return nil, "", errors.New("no upload component found yet, try discovering services")
+		return nil, errors.New("no upload component found yet, try discovering services")
 	}
 
 	//we assume server is telling the truth
 	if request.Size > client.HttpUploadComponent.MaxFileSize {
-		return nil, "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"upload size too large, want %d, have %d",
 			request.Size, client.HttpUploadComponent.MaxFileSize,
 		)
 	}
 
-	//client.Session.encode
-	header := stanza.IQ{
-		ID:   uuid.New().String(),
-		To:   client.HttpUploadComponent.Jid,
-		Type: stanza.GetIQ,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	slotCtx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
 	defer cancel() // Important to prevent context leak
 
-	// send request for upload slot
-	t, err := client.Session.EncodeIQElement(ctx, request, header)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to send iq requesting upload slot, %w", err)
-	}
+	// use mellium function to get slot
+	slot, err := upload.GetSlot(slotCtx, request, client.HttpUploadComponent.Jid, client.Session)
 
-	// decode upload slot details
-	d := xml.NewTokenDecoder(t)
-	response := &UploadSlotResponse{}
-	err = d.Decode(response)
+	//convert return values
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to decode upload slot response, %w", err)
+		return nil, err
 	}
-
-	return &response.Slot.Put, response.Slot.Get.URL, nil
+	return &slot, nil
 }
 
 // UploadProgress represents the current status of an upload operation
 type UploadProgress struct {
-	BytesSent  int64
-	TotalBytes int64
-	Percentage float64
+	BytesSent  int
+	TotalBytes int
+	Percentage float32
 	GetURL     string // Only set when upload is complete
 	Error      error  // Set if an error occurs
 }
@@ -107,15 +94,15 @@ type UploadProgress struct {
 // progressReader wraps an io.Reader to track upload progress
 type progressReader struct {
 	reader       io.Reader
-	bytesRead    int64
-	totalSize    int64
-	progressFunc func(int64)
+	bytesRead    int
+	totalSize    int
+	progressFunc func(int)
 }
 
 // Read reads data into the provided byte slice and updates the progress tracking information.
 func (pr *progressReader) Read(p []byte) (int, error) {
 	n, err := pr.reader.Read(p)
-	pr.bytesRead += int64(n)
+	pr.bytesRead += n
 	if pr.progressFunc != nil {
 		pr.progressFunc(pr.bytesRead)
 	}
@@ -126,14 +113,14 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 // It writes the update to progressChan without blocking if the channel is not ready.
 // Parameters: bytesSent is the number of bytes uploaded, totalBytes is the total size of the upload, err is any error
 // encountered, getURL is the download URL if upload completes successfully, and progressChan is the channel for progress.
-func sendProgress(bytesSent int64, totalBytes int64, err error, getURL string, progressChan chan<- UploadProgress) {
+func sendProgress(bytesSent int, totalBytes int, err error, getURL string, progressChan chan<- UploadProgress) {
 	if progressChan == nil {
 		return
 	}
 	progress := UploadProgress{
 		BytesSent:  bytesSent,
 		TotalBytes: totalBytes,
-		Percentage: float64(bytesSent) / float64(totalBytes) * 100,
+		Percentage: float32(bytesSent) / float32(totalBytes) * 100,
 		Error:      err,
 		GetURL:     getURL,
 	}
@@ -165,21 +152,21 @@ func (client *XmppClient) UploadFileFromBytes(
 	}
 
 	// put together data
-	request := UploadRequestDetails{
-		Filename: filepath.Base(filename),
-		Size:     int64(len(content)),
+	request := upload.File{
+		Name: filepath.Base(filename),
+		Size: len(content),
 	}
 
 	// request upload slot
-	putData, getURL, err := client.getUploadSlot(request)
+	slot, err := client.getUploadSlot(ctx, request)
 	if err != nil {
 		sendProgress(0, request.Size, fmt.Errorf("failed to get upload slot: %w", err), "", progressChan)
 		return
 	}
 
 	//sanity check
-	if putData == nil || getURL == "" {
-		sendProgress(0, request.Size, errors.New("upload slot is malformed"), "", progressChan)
+	if slot == nil || slot.PutURL == nil || slot.GetURL == nil {
+		sendProgress(0, request.Size, errors.New("upload slot response from the server is malformed"), "", progressChan)
 		return
 	}
 
@@ -187,19 +174,14 @@ func (client *XmppClient) UploadFileFromBytes(
 	reader := &progressReader{
 		reader:       bytes.NewReader(content),
 		totalSize:    request.Size,
-		progressFunc: func(n int64) { sendProgress(n, request.Size, nil, "", progressChan) },
+		progressFunc: func(n int) { sendProgress(n, request.Size, nil, "", progressChan) },
 	}
 
 	//create new request object
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, putData.URL, reader)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, slot.PutURL.String(), reader)
 	if err != nil {
 		sendProgress(0, request.Size, fmt.Errorf("failed to create upload request: %w", err), "", progressChan)
 		return
-	}
-
-	//add auth headers
-	for _, header := range putData.Headers {
-		req.Header.Set(header.Name, header.Value)
 	}
 
 	//make request
@@ -218,7 +200,7 @@ func (client *XmppClient) UploadFileFromBytes(
 	}
 
 	// Send final progress with GetURL
-	sendProgress(request.Size, request.Size, nil, getURL, progressChan)
+	sendProgress(request.Size, request.Size, nil, slot.GetURL.String(), progressChan)
 }
 
 // UploadFile handles the complete process of uploading a file to the XMPP server.
@@ -256,33 +238,33 @@ func (client *XmppClient) UploadFile(
 	}
 
 	// put together data
-	request := UploadRequestDetails{
-		Filename: filepath.Base(path),
-		Size:     fileInfo.Size(),
+	request := upload.File{
+		Name: filepath.Base(path),
+		Size: int(fileInfo.Size()),
 	}
 
 	// request upload slot
-	putData, getURL, err := client.getUploadSlot(request)
+	slot, err := client.getUploadSlot(ctx, request)
 	if err != nil {
 		sendProgress(0, request.Size, fmt.Errorf("failed to get upload slot: %w", err), "", progressChan)
 		return
 	}
 
 	//sanity check
-	if putData == nil || getURL == "" {
-		sendProgress(0, request.Size, errors.New("upload slot is malformed"), "", progressChan)
+	if slot == nil || slot.PutURL == nil || slot.GetURL == nil {
+		sendProgress(0, request.Size, errors.New("upload slot response from the server is malformed"), "", progressChan)
 		return
 	}
 
 	// Create a progress tracking reader
 	reader := &progressReader{
 		reader:       file,
-		totalSize:    fileInfo.Size(),
-		progressFunc: func(n int64) { sendProgress(n, fileInfo.Size(), nil, "", progressChan) },
+		totalSize:    int(fileInfo.Size()),
+		progressFunc: func(n int) { sendProgress(n, int(fileInfo.Size()), nil, "", progressChan) },
 	}
 
 	//create new request object with context for cancellation
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, putData.URL, reader)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, slot.PutURL.String(), reader)
 	if err != nil {
 		sendProgress(0, request.Size, fmt.Errorf("failed to create upload request: %w", err), "", progressChan)
 		return
@@ -291,9 +273,9 @@ func (client *XmppClient) UploadFile(
 	// explicitly set the Content-Length header
 	req.ContentLength = fileInfo.Size()
 
-	//add auth headers
-	for _, header := range putData.Headers {
-		req.Header.Set(header.Name, header.Value)
+	//transfer headers
+	for k, v := range slot.Header {
+		req.Header[k] = v
 	}
 
 	//make request
@@ -312,5 +294,5 @@ func (client *XmppClient) UploadFile(
 	}
 
 	// Send final progress with GetURL
-	sendProgress(request.Size, request.Size, nil, getURL, progressChan)
+	sendProgress(request.Size, request.Size, nil, slot.GetURL.String(), progressChan)
 }

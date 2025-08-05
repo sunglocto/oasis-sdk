@@ -126,7 +126,7 @@ type XMPPChatMessage struct {
 
 type HttpUploadComponent struct {
 	Jid         jid.JID
-	MaxFileSize int64
+	MaxFileSize int
 }
 
 type ChatMessageHandler func(client *XmppClient, message *XMPPChatMessage)

@@ -34,6 +34,10 @@ func (client *XmppClient) SendText(to jid.JID, body string) error {
 	return err
 }
 
+//func (client *XmppClient) SendImage(to jid.JID, body string, url string, description string) error {
+//
+//}
+
 // ReplyToEvent replies to a message event with body as per https://xmpp.org/extensions/xep-0461.html
 // automatically determines whether to send a groupchatmessage or chatmessage.
 func (client *XmppClient) ReplyToEvent(originalMsg *XMPPChatMessage, body string) error {
