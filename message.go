@@ -36,9 +36,9 @@ func (client *XmppClient) SendText(to jid.JID, body string) error {
 
 /*
 SendSingleFileMessage sends a url as a message with a single file.
-As of now, it only implements https://xmpp.org/extensions/xep-0066.html#x-oob,
-however dual support for xep-0066 and https://xmpp.org/extensions/xep-0447.html
-are planned. To is the jid you wish to send the message to, url is the url to the file
+As of now, it only implements https://xmpp.org/extensions/xep-0066.html#x-oob;
+however, dual support for xep-0066 and https://xmpp.org/extensions/xep-0447.html
+is planned. To is the jid you wish to send the message to, url is the url to the file
 as per https://xmpp.org/extensions/xep-0066.html#nonhttp, description is the optional
 description, which seems to go unused by most clients. More arguments will be added to support
 0447.
