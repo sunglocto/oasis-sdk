@@ -127,33 +127,6 @@ func CreateClient(
 		Local: "body",
 	}
 
-	// ------ chatstates -------
-	composingNS := xml.Name{
-		Local: "composing",
-	}
-	activeNS := xml.Name{
-		Local: "active",
-	}
-	pausedNS := xml.Name{
-		Local: "paused",
-	}
-	inactiveNS := xml.Name{
-		Local: "inactive",
-	}
-	goneNS := xml.Name{
-		Local: "gone",
-	}
-	// ------ chatstates ------
-
-	// ------ receipts --------
-	deliveredNS := xml.Name{
-		Local: "received",
-	}
-	displayedNS := xml.Name{
-		Local: "displayed",
-	}
-	// ------ receipts --------
-
 	client.Multiplexer = mux.New(
 		"jabber:client",
 

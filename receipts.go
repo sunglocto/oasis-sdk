@@ -4,9 +4,18 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+
 	"mellium.im/xmlstream"
 	"mellium.im/xmpp/stanza"
 )
+
+// ------ routing namespace --------
+var deliveredNS = xml.Name{
+	Local: "received",
+}
+var displayedNS = xml.Name{
+	Local: "displayed",
+}
 
 func (client *XmppClient) internalHandleDeliveryReceipt(header stanza.Message, t xmlstream.TokenReadEncoder) error {
 

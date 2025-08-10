@@ -2,6 +2,7 @@ package oasis_sdk
 
 import (
 	"encoding/xml"
+
 	"mellium.im/xmlstream"
 	"mellium.im/xmpp/stanza"
 )
@@ -15,6 +16,23 @@ const (
 	ChatStatePaused
 	ChatStateGone
 )
+
+// ------ mellium routing namespaces -------
+var composingNS = xml.Name{
+	Local: "composing",
+}
+var activeNS = xml.Name{
+	Local: "active",
+}
+var pausedNS = xml.Name{
+	Local: "paused",
+}
+var inactiveNS = xml.Name{
+	Local: "inactive",
+}
+var goneNS = xml.Name{
+	Local: "gone",
+}
 
 type GoneChatstate struct {
 	XMLName xml.Name `xml:"http://jabber.org/protocol/chatstates gone"`
