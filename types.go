@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/xml"
 	"sync"
+	"sync/atomic"
 
 	"mellium.im/xmpp"
+	"mellium.im/xmpp/bookmarks"
 	"mellium.im/xmpp/jid"
 	"mellium.im/xmpp/muc"
 	"mellium.im/xmpp/mux"
@@ -144,6 +146,7 @@ type GroupChatMessageHandler func(client *XmppClient, channel *muc.Channel, mess
 type ChatstateHandler func(client *XmppClient, from jid.JID, state ChatState)
 type DeliveryReceiptHandler func(client *XmppClient, from jid.JID, id string)
 type ReadReceiptHandler func(client *XmppClient, from jid.JID, id string)
+type BookmarkHandler func(client *XmppClient, bookmark bookmarks.Channel)
 
 type handlerMap struct {
 	Lock                   sync.Mutex
@@ -152,6 +155,7 @@ type handlerMap struct {
 	ChatstateHandler       ChatstateHandler
 	DeliveryReceiptHandler DeliveryReceiptHandler
 	ReadReceiptHandler     ReadReceiptHandler
+	BookmarkHandler        BookmarkHandler
 }
 
 // XmppClient is the end xmpp client object from which everything else works around
@@ -163,9 +167,12 @@ type XmppClient struct {
 	Server              *string
 	Session             *xmpp.Session
 	Multiplexer         *mux.ServeMux
+	AutojoinLevel       atomic.Int32
 	HttpUploadComponent *HttpUploadComponent
 	MucClient           *muc.Client
 	mucsToJoin          []jid.JID
 	MucChannels         map[string]*muc.Channel
 	handlers            handlerMap
+	bookmarks           map[string]bookmarks.Channel
+	bookmarkLock        sync.RWMutex
 }
