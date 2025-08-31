@@ -88,14 +88,39 @@ func (client *XmppClient) Connect() error {
 	return client.startServing()
 }
 
+func (client *XmppClient) SetDmHandler(handler ChatMessageHandler) {
+	client.handlers.Lock.Lock()
+	client.handlers.DmHandler = handler
+	client.handlers.Lock.Unlock()
+}
+
+func (client *XmppClient) SetGroupChatHandler(handler GroupChatMessageHandler) {
+	client.handlers.Lock.Lock()
+	client.handlers.GroupMessageHandler = handler
+	client.handlers.Lock.Unlock()
+}
+
+func (client *XmppClient) SetChatstateHandler(handler ChatstateHandler) {
+	client.handlers.Lock.Lock()
+	client.handlers.ChatstateHandler = handler
+	client.handlers.Lock.Unlock()
+}
+
+func (client *XmppClient) SetDeliveryReceiptHandler(handler DeliveryReceiptHandler) {
+	client.handlers.Lock.Lock()
+	client.handlers.DeliveryReceiptHandler = handler
+	client.handlers.Lock.Unlock()
+}
+
+func (client *XmppClient) SetReadReceiptHandler(handler ReadReceiptHandler) {
+	client.handlers.Lock.Lock()
+	client.handlers.ReadReceiptHandler = handler
+	client.handlers.Lock.Unlock()
+}
+
 // CreateClient creates the client object using the login info object and returns it
 func CreateClient(
 	login *LoginInfo,
-	dmHandler ChatMessageHandler,
-	groupMessageHandler GroupChatMessageHandler,
-	chatstateHandler ChatstateHandler,
-	deliveryReceiptHandler DeliveryReceiptHandler,
-	readReceiptHandler ReadReceiptHandler,
 ) (*XmppClient, error) {
 
 	mucJIDs := make([]jid.JID, 0, len(login.MucsToJoin))
@@ -111,14 +136,9 @@ func CreateClient(
 
 	// create client object
 	client := &XmppClient{
-		Login:                  login,
-		dmHandler:              dmHandler,
-		groupMessageHandler:    groupMessageHandler,
-		chatstateHandler:       chatstateHandler,
-		deliveryReceiptHandler: deliveryReceiptHandler,
-		readReceiptHandler:     readReceiptHandler,
-		mucsToJoin:             mucJIDs,
-		MucChannels:            make(map[string]*muc.Channel),
+		Login:       login,
+		mucsToJoin:  mucJIDs,
+		MucChannels: make(map[string]*muc.Channel),
 	}
 	client.Ctx, client.CtxCancel = context.WithCancel(context.Background())
 

@@ -18,9 +18,10 @@ var displayedNS = xml.Name{
 }
 
 func (client *XmppClient) internalHandleDeliveryReceipt(header stanza.Message, t xmlstream.TokenReadEncoder) error {
-
-	//only decode if there is a handler
-	if client.deliveryReceiptHandler == nil {
+	client.handlers.Lock.Lock()
+	handler := client.handlers.DeliveryReceiptHandler
+	client.handlers.Lock.Unlock()
+	if handler == nil {
 		return nil
 	}
 
@@ -35,14 +36,15 @@ func (client *XmppClient) internalHandleDeliveryReceipt(header stanza.Message, t
 	//only one possible field
 	id := receipt.Received.ID
 
-	client.deliveryReceiptHandler(client, header.From, id)
+	handler(client, header.From, id)
 	return nil
 }
 
 func (client *XmppClient) internalHandleReadReceipt(header stanza.Message, t xmlstream.TokenReadEncoder) error {
-
-	//only decode if there is a handler
-	if client.readReceiptHandler == nil {
+	client.handlers.Lock.Lock()
+	handler := client.handlers.ReadReceiptHandler
+	client.handlers.Lock.Unlock()
+	if handler == nil {
 		return nil
 	}
 
@@ -57,7 +59,7 @@ func (client *XmppClient) internalHandleReadReceipt(header stanza.Message, t xml
 	//only one possible field
 	id := receipt.Displayed.ID
 
-	client.readReceiptHandler(client, header.From, id)
+	handler(client, header.From, id)
 	return nil
 }
 

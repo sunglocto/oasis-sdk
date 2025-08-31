@@ -51,36 +51,51 @@ type PausedChatstate struct {
 }
 
 func (client *XmppClient) internalComposingChatstateReciever(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
-	if client.chatstateHandler != nil {
-		client.chatstateHandler(client, header.From, ChatStateComposing)
+	client.handlers.Lock.Lock()
+	handler := client.handlers.ChatstateHandler
+	client.handlers.Lock.Unlock()
+	if handler != nil {
+		handler(client, header.From, ChatStateComposing)
 	}
 	return nil
 }
 
 func (client *XmppClient) internalActiveChatstateReceiver(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
-	if client.chatstateHandler != nil {
-		client.chatstateHandler(client, header.From, ChatStateActive)
+	client.handlers.Lock.Lock()
+	handler := client.handlers.ChatstateHandler
+	client.handlers.Lock.Unlock()
+	if handler != nil {
+		handler(client, header.From, ChatStateActive)
 	}
 	return nil
 }
 
 func (client *XmppClient) internalPausedChatstateReceiver(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
-	if client.chatstateHandler != nil {
-		client.chatstateHandler(client, header.From, ChatStatePaused)
+	client.handlers.Lock.Lock()
+	handler := client.handlers.ChatstateHandler
+	client.handlers.Lock.Unlock()
+	if handler != nil {
+		handler(client, header.From, ChatStatePaused)
 	}
 	return nil
 }
 
 func (client *XmppClient) internalInactiveChatstateReceiver(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
-	if client.chatstateHandler != nil {
-		client.chatstateHandler(client, header.From, ChatStateInactive)
+	client.handlers.Lock.Lock()
+	handler := client.handlers.ChatstateHandler
+	client.handlers.Lock.Unlock()
+	if handler != nil {
+		handler(client, header.From, ChatStateInactive)
 	}
 	return nil
 }
 
 func (client *XmppClient) internalGoneChatstateReceiver(header stanza.Message, _ xmlstream.TokenReadEncoder) error {
-	if client.chatstateHandler != nil {
-		client.chatstateHandler(client, header.From, ChatStateGone)
+	client.handlers.Lock.Lock()
+	handler := client.handlers.ChatstateHandler
+	client.handlers.Lock.Unlock()
+	if handler != nil {
+		handler(client, header.From, ChatStateGone)
 	}
 	return nil
 }

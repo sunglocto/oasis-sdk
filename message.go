@@ -3,10 +3,11 @@ package oasis_sdk
 import (
 	"encoding/xml"
 	"fmt"
+	"strings"
+
 	"mellium.im/xmlstream"
 	"mellium.im/xmpp/jid"
 	"mellium.im/xmpp/stanza"
-	"strings"
 )
 
 // SendText sends a plain message with `body` (type string) to `to` JID.
@@ -143,8 +144,14 @@ func (client *XmppClient) ReplyToEvent(originalMsg *XMPPChatMessage, body string
 }
 
 func (client *XmppClient) internalHandleDM(header stanza.Message, t xmlstream.TokenReadEncoder) error {
+
+	//get handler with lock
+	client.handlers.Lock.Lock()
+	handler := client.handlers.DmHandler
+	client.handlers.Lock.Unlock()
+
 	//nothing to do if theres no handler
-	if client.dmHandler == nil {
+	if handler == nil {
 		return nil
 	}
 
@@ -168,13 +175,18 @@ func (client *XmppClient) internalHandleDM(header stanza.Message, t xmlstream.To
 	msg.ParseReply()
 
 	//call handler and return to connection
-	client.dmHandler(client, msg)
+	handler(client, msg)
 	return nil
 }
 
 func (client *XmppClient) internalHandleGroupMsg(header stanza.Message, t xmlstream.TokenReadEncoder) error {
+	//get handler with lock
+	client.handlers.Lock.Lock()
+	handler := client.handlers.GroupMessageHandler
+	client.handlers.Lock.Unlock()
+
 	//nothing to do if theres no handler
-	if client.groupMessageHandler == nil {
+	if handler == nil {
 		return nil
 	}
 
@@ -199,6 +211,6 @@ func (client *XmppClient) internalHandleGroupMsg(header stanza.Message, t xmlstr
 	msg.ParseReply()
 
 	//call handler and return to connection
-	client.groupMessageHandler(client, ch, msg)
+	handler(client, ch, msg)
 	return nil
 }

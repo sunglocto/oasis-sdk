@@ -3,6 +3,8 @@ package oasis_sdk
 import (
 	"context"
 	"encoding/xml"
+	"sync"
+
 	"mellium.im/xmpp"
 	"mellium.im/xmpp/jid"
 	"mellium.im/xmpp/muc"
@@ -143,22 +145,27 @@ type ChatstateHandler func(client *XmppClient, from jid.JID, state ChatState)
 type DeliveryReceiptHandler func(client *XmppClient, from jid.JID, id string)
 type ReadReceiptHandler func(client *XmppClient, from jid.JID, id string)
 
+type handlerMap struct {
+	Lock                   sync.Mutex
+	DmHandler              ChatMessageHandler
+	GroupMessageHandler    GroupChatMessageHandler
+	ChatstateHandler       ChatstateHandler
+	DeliveryReceiptHandler DeliveryReceiptHandler
+	ReadReceiptHandler     ReadReceiptHandler
+}
+
 // XmppClient is the end xmpp client object from which everything else works around
 type XmppClient struct {
-	Ctx                    context.Context
-	CtxCancel              context.CancelFunc
-	Login                  *LoginInfo
-	JID                    *jid.JID
-	Server                 *string
-	Session                *xmpp.Session
-	Multiplexer            *mux.ServeMux
-	HttpUploadComponent    *HttpUploadComponent
-	MucClient              *muc.Client
-	mucsToJoin             []jid.JID
-	MucChannels            map[string]*muc.Channel
-	dmHandler              ChatMessageHandler
-	groupMessageHandler    GroupChatMessageHandler
-	chatstateHandler       ChatstateHandler
-	deliveryReceiptHandler DeliveryReceiptHandler
-	readReceiptHandler     ReadReceiptHandler
+	Ctx                 context.Context
+	CtxCancel           context.CancelFunc
+	Login               *LoginInfo
+	JID                 *jid.JID
+	Server              *string
+	Session             *xmpp.Session
+	Multiplexer         *mux.ServeMux
+	HttpUploadComponent *HttpUploadComponent
+	MucClient           *muc.Client
+	mucsToJoin          []jid.JID
+	MucChannels         map[string]*muc.Channel
+	handlers            handlerMap
 }
