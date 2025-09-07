@@ -67,6 +67,9 @@ func (client *XmppClient) Connect() error {
 		panic("session never got set")
 	}
 
+	client.isStartedLock.Unlock()
+	defer client.isStartedLock.Lock()
+
 	//TODO: move joins elsewhere
 	go func() {
 		n := len(client.mucsToJoin)
@@ -140,6 +143,7 @@ func CreateClient(
 		mucsToJoin:  mucJIDs,
 		MucChannels: make(map[string]*muc.Channel),
 	}
+	client.isStartedLock.Lock()
 	client.Ctx, client.CtxCancel = context.WithCancel(context.Background())
 
 	client.MucClient = &muc.Client{}

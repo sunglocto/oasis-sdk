@@ -160,6 +160,7 @@ type handlerMap struct {
 
 // XmppClient is the end xmpp client object from which everything else works around
 type XmppClient struct {
+	isStartedLock       sync.Mutex
 	Ctx                 context.Context
 	CtxCancel           context.CancelFunc
 	Login               *LoginInfo
@@ -175,4 +176,10 @@ type XmppClient struct {
 	handlers            handlerMap
 	bookmarks           map[string]bookmarks.Channel
 	bookmarkLock        sync.RWMutex
+}
+
+// AwaitStart locks and unlocks the isStarted lock to safely await the client being started before executing things.
+func (client *XmppClient) AwaitStart() {
+	client.isStartedLock.Lock()
+	defer client.isStartedLock.Unlock()
 }

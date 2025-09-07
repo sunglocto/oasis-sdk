@@ -6,6 +6,26 @@ import (
 	"mellium.im/xmpp/bookmarks"
 )
 
+func (client *XmppClient) SetBookmarkHandler(reEmit bool, handler BookmarkHandler) {
+	//set handler
+	client.handlers.Lock.Lock()
+	client.handlers.BookmarkHandler = handler
+	client.handlers.Lock.Unlock()
+
+	client.bookmarkLock.RLock()
+	//emit to the handler
+	if reEmit || len(client.bookmarks) == 0 {
+		go client.fetchBookmarks(true)
+	}
+	client.bookmarkLock.RUnlock()
+}
+
+// RefreshBookmarks updates the internal bookmark cache by fetching the latest bookmarks from the server, then returns that cache
+func (client *XmppClient) RefreshBookmarks(reEmit bool) map[string]bookmarks.Channel {
+	client.fetchBookmarks(reEmit)
+	return client.BookmarkCache()
+}
+
 // BookmarkCache returns a thread-safe copy of the client's bookmarks cache as a map of JID strings to Channel objects.
 func (client *XmppClient) BookmarkCache() map[string]bookmarks.Channel {
 	client.bookmarkLock.RLock()
@@ -17,7 +37,11 @@ func (client *XmppClient) BookmarkCache() map[string]bookmarks.Channel {
 	return res
 }
 
-func (client *XmppClient) FetchBookmarks() {
+// fetchBookmarks synchronizes the client's bookmarks with the server and updates the local cache efficiently.
+// It acquires necessary locks for safe concurrent access and emits bookmarks to a registered handler if available.
+func (client *XmppClient) fetchBookmarks(emit bool) {
+
+	client.AwaitStart()
 
 	//fetch
 	iter := bookmarks.Fetch(client.Ctx, client.Session)
@@ -38,6 +62,11 @@ func (client *XmppClient) FetchBookmarks() {
 
 	//done writing
 	client.bookmarkLock.Unlock()
+
+	//only emit to handler if we should
+	if !emit {
+		return
+	}
 
 	//get bookmark handler
 	client.handlers.Lock.Lock()
