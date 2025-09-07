@@ -91,30 +91,40 @@ func (client *XmppClient) Connect() error {
 	return client.startServing()
 }
 
+// SetDmHandler sets the handler function for processing direct messages.
+// The handler is invoked when a direct chat message is received.
 func (client *XmppClient) SetDmHandler(handler ChatMessageHandler) {
 	client.handlers.Lock.Lock()
 	client.handlers.DmHandler = handler
 	client.handlers.Lock.Unlock()
 }
 
+// SetGroupChatHandler sets the handler function for processing group chat messages.
+// The handler is invoked when a group chat message is received.
 func (client *XmppClient) SetGroupChatHandler(handler GroupChatMessageHandler) {
 	client.handlers.Lock.Lock()
 	client.handlers.GroupMessageHandler = handler
 	client.handlers.Lock.Unlock()
 }
 
+// SetChatstateHandler sets the handler function for processing chat state notifications.
+// The handler is invoked when chat state changes like active, composing, paused etc. are received.
 func (client *XmppClient) SetChatstateHandler(handler ChatstateHandler) {
 	client.handlers.Lock.Lock()
 	client.handlers.ChatstateHandler = handler
 	client.handlers.Lock.Unlock()
 }
 
+// SetDeliveryReceiptHandler sets the handler function for processing delivery receipts.
+// The handler is invoked when a delivery receipt for a sent message is received.
 func (client *XmppClient) SetDeliveryReceiptHandler(handler DeliveryReceiptHandler) {
 	client.handlers.Lock.Lock()
 	client.handlers.DeliveryReceiptHandler = handler
 	client.handlers.Lock.Unlock()
 }
 
+// SetReadReceiptHandler sets the handler function for processing read receipts.
+// The handler is invoked when a read receipt for a sent message is received.
 func (client *XmppClient) SetReadReceiptHandler(handler ReadReceiptHandler) {
 	client.handlers.Lock.Lock()
 	client.handlers.ReadReceiptHandler = handler
