@@ -70,22 +70,7 @@ func (client *XmppClient) Connect() error {
 	client.isStartedLock.Unlock()
 	defer client.isStartedLock.Lock()
 
-	//TODO: move joins elsewhere
-	go func() {
-		n := len(client.mucsToJoin)
-		for i, mucJID := range client.mucsToJoin {
-			mucStr := mucJID.Bare().String()
-			fmt.Printf("Joining muc %d/%d \"%s\" with nickname \"%s\"\n", i+1, n, mucStr, mucJID.Resourcepart())
-			ch, err := client.MucClient.Join(client.Ctx, mucJID, client.Session)
-			if err != nil {
-				println(err.Error())
-				continue
-			}
-			client.MucChannels[mucStr] = ch
-			fmt.Printf("joined muc %d/%d\n", i+1, n)
-		}
-	}()
-
+	//TODO: do something with discoed services
 	go client.DiscoServicesOnServer()
 
 	return client.startServing()
@@ -132,9 +117,7 @@ func (client *XmppClient) SetReadReceiptHandler(handler ReadReceiptHandler) {
 }
 
 // CreateClient creates the client object using the login info object and returns it
-func CreateClient(
-	login *LoginInfo,
-) (*XmppClient, error) {
+func CreateClient(login *LoginInfo) (*XmppClient, error) {
 
 	mucJIDs := make([]jid.JID, 0, len(login.MucsToJoin))
 	for _, jidStr := range login.MucsToJoin {

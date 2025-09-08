@@ -173,6 +173,7 @@ type XmppClient struct {
 	MucClient           *muc.Client
 	mucsToJoin          []jid.JID
 	MucChannels         map[string]*muc.Channel
+	mucLock             sync.RWMutex
 	handlers            handlerMap
 	bookmarks           map[string]bookmarks.Channel
 	bookmarkLock        sync.RWMutex
