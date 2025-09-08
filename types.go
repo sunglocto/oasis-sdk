@@ -16,13 +16,12 @@ import (
 
 // LoginInfo is a struct of the information required to log into the xmpp  client
 type LoginInfo struct {
-	Host        string   `json:"Host"`
-	User        string   `json:"User"`
-	Password    string   `json:"Password"`
-	DisplayName string   `json:"DisplayName"`
-	TLSoff      bool     `json:"NoTLS"`
-	StartTLS    bool     `json:"StartTLS"`
-	MucsToJoin  []string `json:"Mucs"`
+	Host        string `json:"Host"`
+	User        string `json:"User"`
+	Password    string `json:"Password"`
+	DisplayName string `json:"DisplayName"`
+	TLSoff      bool   `json:"NoTLS"`
+	StartTLS    bool   `json:"StartTLS"`
 }
 
 type FallbackBody struct {
@@ -171,7 +170,6 @@ type XmppClient struct {
 	AutojoinLevel       atomic.Int32
 	HttpUploadComponent *HttpUploadComponent
 	MucClient           *muc.Client
-	mucsToJoin          []jid.JID
 	MucChannels         map[string]*muc.Channel
 	mucLock             sync.RWMutex
 	handlers            handlerMap

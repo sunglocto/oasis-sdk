@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/xml"
 	"errors"
-	"fmt"
 
 	"mellium.im/sasl"
 	"mellium.im/xmpp"
@@ -119,21 +118,9 @@ func (client *XmppClient) SetReadReceiptHandler(handler ReadReceiptHandler) {
 // CreateClient creates the client object using the login info object and returns it
 func CreateClient(login *LoginInfo) (*XmppClient, error) {
 
-	mucJIDs := make([]jid.JID, 0, len(login.MucsToJoin))
-	for _, jidStr := range login.MucsToJoin {
-		//join with default displayname
-		j, err := jid.Parse(jidStr + "/" + login.DisplayName)
-		if err != nil {
-			fmt.Println("Error parsing MUC jid: " + err.Error())
-			continue
-		}
-		mucJIDs = append(mucJIDs, j)
-	}
-
 	// create client object
 	client := &XmppClient{
 		Login:       login,
-		mucsToJoin:  mucJIDs,
 		MucChannels: make(map[string]*muc.Channel),
 	}
 	client.isStartedLock.Lock()
