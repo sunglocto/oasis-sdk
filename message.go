@@ -157,25 +157,25 @@ func (client *XmppClient) internalHandleDM(header stanza.Message, t xmlstream.To
 
 	//decode remaining parts to decode
 	d := xml.NewTokenDecoder(t)
-	body := &ChatMessageBody{}
-	err := d.Decode(body)
+	body := ChatMessageBody{}
+	err := d.Decode(&body)
 	if err != nil {
 		return err
 	}
-	msg := &XMPPChatMessage{
+	msg := XMPPChatMessage{
 		Message:         header,
-		ChatMessageBody: *body,
+		ChatMessageBody: body,
 	}
 
 	//mark as received if requested, and not group chat as per https://xmpp.org/extensions/xep-0184.html#when-groupchat
 	if msg.RequestingDeliveryReceipt() {
-		go client.MarkAsDelivered(msg)
+		go client.MarkAsDelivered(&msg)
 	}
 
 	msg.ParseReply()
 
 	//call handler and return to connection
-	handler(client, msg)
+	handler(client, &msg)
 	return nil
 }
 

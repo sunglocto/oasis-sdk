@@ -8,6 +8,7 @@ import (
 
 	"mellium.im/xmpp"
 	"mellium.im/xmpp/bookmarks"
+	"mellium.im/xmpp/disco"
 	"mellium.im/xmpp/jid"
 	"mellium.im/xmpp/muc"
 	"mellium.im/xmpp/mux"
@@ -135,6 +136,50 @@ type XMPPChatMessage struct {
 	ChatMessageBody
 }
 
+var vanityPresenceNS = xml.Name{
+	Local: "x",
+}
+
+type VCardUpdate struct {
+	XMLName xml.Name `xml:"vcard-temp:x:update x"`
+	Photo   string   `xml:"photo"`
+}
+
+type OccupantId struct {
+	XMLName xml.Name `xml:"urn:xmpp:occupant-id:0 occupant-id"`
+	Id      string   `xml:"id,attr"`
+}
+
+type MUCUser struct {
+	XMLName xml.Name       `xml:"http://jabber.org/protocol/muc#user x"`
+	Item    *MUCUserItem   `xml:"item"`
+	Status  *MUCUserStatus `xml:"status"`
+}
+
+type MUCUserItem struct {
+	JID         string `xml:"jid,attr"`
+	Affiliation string `xml:"affiliation,attr"`
+	Role        string `xml:"role,attr"`
+}
+
+type MUCUserStatus struct {
+	Code string `xml:"code,attr"`
+}
+
+type PresenceBody struct {
+	Show        string       `xml:"show"`
+	Status      string       `xml:"status"`
+	Caps        *disco.Caps  `xml:"c"`
+	VCardUpdate *VCardUpdate `xml:"vcard-temp:x:update x"`
+	OccupantId  *OccupantId  `xml:"occupant-id"`
+	MUCUser     *MUCUser     `xml:"http://jabber.org/protocol/muc#user x"`
+}
+
+type Presence struct {
+	stanza.Presence
+	PresenceBody
+}
+
 type HttpUploadComponent struct {
 	Jid         jid.JID
 	MaxFileSize int
@@ -147,6 +192,8 @@ type DeliveryReceiptHandler func(client *XmppClient, from jid.JID, id string)
 type ReadReceiptHandler func(client *XmppClient, from jid.JID, id string)
 type BookmarkHandler func(client *XmppClient, bookmark bookmarks.Channel)
 
+type PresenceHandler func(client *XmppClient, from jid.JID, p UserPresence)
+
 type handlerMap struct {
 	Lock                   sync.Mutex
 	DmHandler              ChatMessageHandler
@@ -155,6 +202,7 @@ type handlerMap struct {
 	DeliveryReceiptHandler DeliveryReceiptHandler
 	ReadReceiptHandler     ReadReceiptHandler
 	BookmarkHandler        BookmarkHandler
+	PresenceHandler        PresenceHandler
 }
 
 // XmppClient is the end xmpp client object from which everything else works around

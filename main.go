@@ -66,6 +66,7 @@ func (client *XmppClient) Connect() error {
 		panic("session never got set")
 	}
 
+	//only unlock while running
 	client.isStartedLock.Unlock()
 	defer client.isStartedLock.Lock()
 
@@ -115,6 +116,14 @@ func (client *XmppClient) SetReadReceiptHandler(handler ReadReceiptHandler) {
 	client.handlers.Lock.Unlock()
 }
 
+// SetPresenceHandler sets the handler function for processing presence updates.
+// The handler is invoked when a presence update is received.
+func (client *XmppClient) SetPresenceHandler(handler PresenceHandler) {
+	client.handlers.Lock.Lock()
+	client.handlers.PresenceHandler = handler
+	client.handlers.Lock.Unlock()
+}
+
 // CreateClient creates the client object using the login info object and returns it
 func CreateClient(login *LoginInfo) (*XmppClient, error) {
 
@@ -161,6 +170,8 @@ func CreateClient(login *LoginInfo) (*XmppClient, error) {
 
 		// Receipt handlers for group messages
 		mux.MessageFunc(stanza.GroupChatMessage, displayedNS, client.internalHandleReadReceipt),
+
+		mux.PresenceFunc(stanza.AvailablePresence, vanityPresenceNS, client.internalHandleVanityPresence),
 	)
 
 	//string to jid object

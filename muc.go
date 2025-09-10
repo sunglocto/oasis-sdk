@@ -48,8 +48,6 @@ func (client *XmppClient) ConnectMuc(bookmark bookmarks.Channel, histCFG MucLega
 		opts = append(opts, muc.Since(*histCFG.Since))
 	}
 
-	fmt.Println("Debug: options are", opts)
-
 	ch, err := client.MucClient.Join(ctx, j, client.Session, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("mellium unable to join muc %s: %w",
