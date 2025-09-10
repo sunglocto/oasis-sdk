@@ -21,13 +21,18 @@ Currently supported XMPP features include:
 - **Message Management**
     - Send and receive messages
     - Message reply parsing and sending
-    - basic MUC interop
+    - Send embedded attachments via XEP-0066
+
+- **Basic MUC Interop**
+  - Connect and Disconnect from muc
+  - Fetch Bookmarks
+    - other bookmark features wip
 
 - **HTTP Upload** (XEP-0363)
 
 ## Project Structure
 
-A Go-based project developed with Go 1.24.5.
+A Go-based project developed with Go 1.24.6.
 
 ```
 ├── main.go           # Application entry point
@@ -38,6 +43,8 @@ A Go-based project developed with Go 1.24.5.
 ├── receipts.go       # Message receipt handling
 ├── chatstates.go     # Chat state management
 ├── parseFeatures.go  # Feature parsing functionality
+├── bookmarks.go      # Bookmark management
+├── muc.go            # Multi-User Chat implementation
 └── go.mod            # Go module dependencies
 ```
 ## Requirements
