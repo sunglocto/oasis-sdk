@@ -2,12 +2,13 @@ package oasis_sdk
 
 import (
 	"fmt"
-	"golang.org/x/net/context"
 	"log"
+	"strconv"
+
+	"golang.org/x/net/context"
 	"mellium.im/xmpp/disco"
 	"mellium.im/xmpp/disco/items"
 	jid2 "mellium.im/xmpp/jid"
-	"strconv"
 )
 
 /*
@@ -26,6 +27,11 @@ func (client *XmppClient) DiscoServerItem(level int, item items.Item, err error)
 	info, err := disco.GetInfo(context.Background(), "", item.JID, client.Session)
 	if err != nil {
 		fmt.Printf("Error while getting info about %s, %v\n", item.JID.String(), err)
+	}
+
+	// learned this happens when an item is unavailable. oops!
+	if len(info.Identity) < 1 {
+		return disco.ErrSkipItem
 	}
 
 	identity := info.Identity[0]
