@@ -18,6 +18,9 @@ type MucLegacyHistoryConfig struct {
 }
 
 func (client *XmppClient) ConnectMuc(bookmark bookmarks.Channel, histCFG MucLegacyHistoryConfig, ctx context.Context) (*muc.Channel, error) {
+
+	client.AwaitStart()
+
 	fmt.Println("Debug: Connecting to muc", bookmark)
 
 	if bookmark.Nick == "" {
