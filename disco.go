@@ -50,7 +50,7 @@ func (client *XmppClient) DiscoServerItem(level int, item items.Item, err error)
 			v, ok := x.GetString("max-file-size")
 			if ok {
 				//fmt.Printf("max-file-size: %s\n", v)
-				maxFileSize, err := strconv.ParseInt(v, 10, 32)
+				maxFileSize, err := strconv.ParseInt(v, 10, 64)
 				if err != nil {
 					fmt.Printf("Could not parse max-file-size: %v\n", err)
 					maxFileSize = 0
