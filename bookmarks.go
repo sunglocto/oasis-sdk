@@ -1,9 +1,12 @@
 package oasis_sdk
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	"mellium.im/xmpp/bookmarks"
+	"mellium.im/xmpp/jid"
 )
 
 func (client *XmppClient) SetBookmarkHandler(reEmit bool, handler BookmarkHandler) {
@@ -84,4 +87,59 @@ func (client *XmppClient) fetchBookmarks(emit bool) {
 	for _, channel := range client.bookmarks {
 		handler(client, channel)
 	}
+}
+
+// PublishBookmark publishes a bookmark for the given channel using the existing client session within the provided context.
+func (client *XmppClient) PublishBookmark(channel bookmarks.Channel, ctx context.Context) error {
+
+	//push to server
+	err := bookmarks.Publish(ctx, client.Session, channel)
+	if err != nil {
+		return err
+	}
+
+	//update local cache
+	client.bookmarkLock.Lock()
+	defer client.bookmarkLock.Unlock()
+	client.bookmarks[channel.JID.String()] = channel
+
+	return nil
+}
+
+// DeleteBookmark removes a bookmark for the specified JID in the existing client session using the provided context.
+func (client *XmppClient) DeleteBookmark(jid jid.JID, ctx context.Context) error {
+	// delete on server
+	err := bookmarks.Delete(ctx, client.Session, jid)
+	if err != nil {
+		return err
+	}
+
+	//update local cache
+	client.bookmarkLock.Lock()
+	defer client.bookmarkLock.Unlock()
+	delete(client.bookmarks, jid.String())
+
+	return nil
+}
+
+func (client *XmppClient) ToggleAutojoin(jidStr string, autojoin bool, ctx context.Context) error {
+	client.bookmarkLock.Lock()
+	defer client.bookmarkLock.Unlock()
+
+	// assume our local cache is up to date
+	bookmark, ok := client.bookmarks[jidStr]
+	if !ok {
+		return errors.New("bookmark not found")
+	}
+
+	//update bookmark
+	bookmark.Autojoin = autojoin
+	client.bookmarks[jidStr] = bookmark
+
+	//publish bookmark to server
+	err := bookmarks.Publish(ctx, client.Session, bookmark)
+	if err != nil {
+		return fmt.Errorf("unable to push bookmark: %w", err)
+	}
+	return nil
 }

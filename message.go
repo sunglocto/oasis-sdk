@@ -202,9 +202,13 @@ func (client *XmppClient) internalHandleGroupMsg(header stanza.Message, t xmlstr
 		ChatMessageBody: *body,
 	}
 
+	//get channel lock
+	client.mucLock.RLock()
+	defer client.mucLock.RUnlock()
 	ch := client.MucChannels[msg.From.Bare().String()]
 
-	fmt.Printf("groupchat %s, found channel: %t\n", msg.From.String(), ch == nil)
+	//TODO: convert to debug logging instead of raw print
+	fmt.Printf("groupchat %s, found channel: %t\n", msg.From.String(), ch != nil)
 
 	//no delivery receipt as per https://xmpp.org/extensions/xep-0184.html#when-groupchat
 
