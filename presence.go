@@ -43,7 +43,7 @@ func (client *XmppClient) internalHandleVanityPresence(header stanza.Presence, t
 	}
 
 	b, _ := xml.MarshalIndent(presence, "", "\t")
-	log.Println(b)
+	log.Println(string(b))
 
 	p := UserPresence{
 		Status: presence.Status,
