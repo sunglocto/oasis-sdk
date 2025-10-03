@@ -2,7 +2,7 @@ package oasis_sdk
 
 import (
 	"encoding/xml"
-
+	"log"
 	"mellium.im/xmlstream"
 	"mellium.im/xmpp/stanza"
 )
@@ -41,6 +41,9 @@ func (client *XmppClient) internalHandleVanityPresence(header stanza.Presence, t
 		Presence:     header,
 		PresenceBody: body,
 	}
+
+	log.Println(presence)
+
 	p := UserPresence{
 		Status: presence.Status,
 	}
