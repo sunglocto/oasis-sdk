@@ -28,8 +28,8 @@ const (
 type UserPresence struct {
 	Indicator PresenceShow
 	Status    string
-	User      MUCUser
-	Avatar    VCardUpdate
+	User      *MUCUser
+	Avatar    *VCardUpdate
 }
 
 func (client *XmppClient) internalHandleVanityPresence(header stanza.Presence, t xmlstream.TokenReadEncoder) error {
@@ -46,8 +46,8 @@ func (client *XmppClient) internalHandleVanityPresence(header stanza.Presence, t
 
 	p := UserPresence{
 		Status: presence.Status,
-		User:   *presence.MUCUser,
-		Avatar: *presence.VCardUpdate,
+		User:   presence.MUCUser,
+		Avatar: presence.VCardUpdate,
 	}
 
 	switch presence.Show {
