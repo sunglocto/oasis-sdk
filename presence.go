@@ -2,7 +2,7 @@ package oasis_sdk
 
 import (
 	"encoding/xml"
-	"log"
+
 	"mellium.im/xmlstream"
 	"mellium.im/xmpp/stanza"
 )
@@ -28,6 +28,8 @@ const (
 type UserPresence struct {
 	Indicator PresenceShow
 	Status    string
+	User      MUCUser
+	Avatar    VCardUpdate
 }
 
 func (client *XmppClient) internalHandleVanityPresence(header stanza.Presence, t xmlstream.TokenReadEncoder) error {
@@ -42,12 +44,12 @@ func (client *XmppClient) internalHandleVanityPresence(header stanza.Presence, t
 		PresenceBody: body,
 	}
 
-	b, _ := xml.MarshalIndent(presence, "", "\t")
-	log.Println(string(b))
-
 	p := UserPresence{
 		Status: presence.Status,
+		User:   *presence.MUCUser,
+		Avatar: *presence.VCardUpdate,
 	}
+
 	switch presence.Show {
 	case "chat":
 		p.Indicator = PresenceShowChat
