@@ -87,17 +87,19 @@ func (client *XmppClient) ReplyToEvent(originalMsg *XMPPChatMessage, body string
 	to := replyTo.Bare()
 
 	//name to include in fallback
+	/*
 	var readableReplyTo string
 	if originalMsg.Type == stanza.ChatMessage {
 		readableReplyTo = to.String()
 	} else if originalMsg.Type == stanza.GroupChatMessage {
 		readableReplyTo = replyTo.Resourcepart()
 	}
+	*/
 
-	timeAgo := "TODO ago"
+	// timeAgo := "TODO ago"
 
 	originalBody := *originalMsg.CleanedBody
-	quoteOriginalBody := readableReplyTo + " | " + timeAgo + "\n> " + strings.ReplaceAll(originalBody, "\n", "\n> ") + "\n"
+	quoteOriginalBody := "> " + strings.ReplaceAll(originalBody, "\n", "\n> ") + "\n"
 
 	//ID to use in reply as per https://xmpp.org/extensions/xep-0461.html#business-id
 	var replyToID string
