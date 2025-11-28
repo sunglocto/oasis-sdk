@@ -1,4 +1,4 @@
-module pain.agency/oasis-sdk
+module github.com/sunglocto/oasis-sdk
 
 go 1.24
 
