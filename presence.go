@@ -44,7 +44,7 @@ func (client *XmppClient) internalHandleVanityPresence(header stanza.Presence, t
 	}
 	p := UserPresence{
 		Status: presence.Status,
-		Type: header.Type,
+		Type: presence.Type,
 	}
 	switch presence.Show {
 	case "chat":
