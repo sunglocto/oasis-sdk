@@ -29,6 +29,7 @@ type UserPresence struct {
 	Indicator PresenceShow
 	Status    string
 	Type	  stanza.PresenceType
+	Body      PresenceBody
 }
 
 func (client *XmppClient) internalHandleVanityPresence(header stanza.Presence, t xmlstream.TokenReadEncoder) error {
@@ -45,6 +46,7 @@ func (client *XmppClient) internalHandleVanityPresence(header stanza.Presence, t
 	p := UserPresence{
 		Status: presence.Status,
 		Type: presence.Type,
+		Body: presence.Body,
 	}
 	switch presence.Show {
 	case "chat":
